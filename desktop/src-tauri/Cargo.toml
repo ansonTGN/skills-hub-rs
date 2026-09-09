@@ -1,0 +1,16 @@
+[package]
+name = "skills-hub-rs-desktop"
+version = "0.2.0-alpha.1"
+edition = "2021"
+description = "Tauri desktop UI for Skills Hub Rust"
+license = "MIT"
+repository = "https://github.com/ansonTGN/skills-hub-rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2.11.5", features = [] }
+skills-hub-rs = { path = "../.." }
