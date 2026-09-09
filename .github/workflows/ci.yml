@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require committed Cargo.lock
+        shell: bash
+        run: test -f Cargo.lock
+      - name: Rust toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal --component rustfmt,clippy
+      - name: Select stable
+        run: rustup default 1.96.0
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Check
+        run: cargo check --all-targets --locked
+      - name: Clippy
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: Tests
+        run: cargo test --all-targets --locked
+      - name: Release build
+        run: cargo build --release --locked
+      - name: Linux smoke test
+        if: runner.os == 'Linux'
+        shell: bash
+        run: ./scripts/smoke-test.sh ./target/release/skills-hub-rs
+      - name: Windows smoke test
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/smoke-test.ps1 -Bin .\target\release\skills-hub-rs.exe
