@@ -1,275 +1,255 @@
 # Skills Hub Rust
 
-Gestor nativo en Rust de **Agent Skills** inspirado en el modelo funcional de
-Skills Hub: instala cada Skill una sola vez en una biblioteca central y lo
-sincroniza con distintos agentes/herramientas de programación.
+<p align="center">
+  <strong>Rust-native manager for Agent Skills — install once, sync across AI coding tools.</strong>
+</p>
 
-> Estado: `v0.1.0` CLI. El objetivo de esta primera versión es validar el núcleo
-> local antes de añadir una interfaz Tauri. No es un fork línea por línea del
-> proyecto original.
+<p align="center">
+  <a href="https://github.com/ansonTGN/skills-hub-rs/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ansonTGN/skills-hub-rs/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/ansonTGN/skills-hub-rs/actions/workflows/desktop-ci.yml"><img alt="Desktop CI" src="https://github.com/ansonTGN/skills-hub-rs/actions/workflows/desktop-ci.yml/badge.svg"></a>
+  <a href="https://github.com/ansonTGN/skills-hub-rs/actions/workflows/security-audit.yml"><img alt="Security audit" src="https://github.com/ansonTGN/skills-hub-rs/actions/workflows/security-audit.yml/badge.svg"></a>
+  <a href="https://github.com/ansonTGN/skills-hub-rs/releases"><img alt="Release" src="https://img.shields.io/github/v/release/ansonTGN/skills-hub-rs?include_prereleases"></a>
+  <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+</p>
 
-## Funciones incluidas
+`skills-hub-rs` es un gestor independiente de **Agent Skills** escrito en Rust. Mantiene una biblioteca central de Skills y la sincroniza con múltiples agentes y herramientas de programación.
 
-- biblioteca central persistente, por defecto `~/.skillshub-rs`;
-- SQLite embebido para Skills, tags, targets, herramientas personalizadas y papelera;
-- instalación desde carpetas locales;
-- instalación desde repositorios Git;
-- descubrimiento recursivo de directorios que contienen `SKILL.md`;
-- **47 adaptadores** integrados para herramientas de IA;
-- sincronización global o por proyecto;
-- `symlink`/`junction`/`copy`, con fallback automático a copia;
-- Cursor fuerza `copy`;
-- soporte de `KIMI_CODE_HOME` para Kimi Code CLI;
-- tags;
-- habilitar/deshabilitar Skills sin borrar la copia central;
-- actualización desde origen local o Git;
-- papelera recuperable durante 30 días;
-- búsqueda en `skills.sh`;
-- herramientas personalizadas;
-- pruebas de integración y smoke tests Linux/Windows;
-- GitHub Actions para CI y Releases binarias.
+La misma lógica de negocio alimenta dos superficies:
 
-## Requisitos para compilar
+- **CLI nativa en Rust** para automatización y scripting.
+- **Desktop Tauri 2** para gestión visual de Skills, targets, tags, búsqueda, scan y papelera.
 
-- Rust stable (`rustup`, `cargo`, `rustc`);
-- Git disponible en `PATH` para `add-git` y actualizaciones Git.
+> **Estado actual:** `v0.2.0-alpha.2` es una **pre-release** pública para Linux x86_64 y Windows x86_64. Incluye CLI, aplicación Desktop, instaladores, checksums SHA-256, SBOM CycloneDX 1.5 y attestations verificables de GitHub Actions.
 
-En Ubuntu:
+> El proyecto está inspirado en el modelo funcional de Skills Hub, pero es una implementación Rust independiente; no es un fork línea por línea.
 
-```bash
-sudo apt update
-sudo apt install -y build-essential pkg-config git curl
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-source "$HOME/.cargo/env"
-rustup toolchain install 1.96.0 --profile minimal --component rustfmt,clippy
-rustup default 1.96.0
-```
-
-## Primera validación local
-
-Si estás usando el ZIP que acompaña a esta entrega:
-
-```bash
-unzip skills-hub-rs-v0.1.0-source.zip
-cd skills-hub-rs
-./scripts/validate-local-linux.sh
-```
-
-El script ejecuta todo el pipeline local: `rustfmt`, `Cargo.lock`, `check`,
-`clippy`, tests, build release, smoke test y empaquetado Linux.
-
-Equivalente manual:
-
-```bash
-cargo fmt --all
-cargo fmt --all -- --check
-cargo generate-lockfile
-cargo check --all-targets --locked
-cargo clippy --all-targets --locked -- -D warnings
-cargo test --all-targets --locked
-cargo build --release --locked
-./scripts/smoke-test.sh ./target/release/skills-hub-rs
-```
-
-El último comando debe terminar con:
+## Modelo operativo
 
 ```text
-SMOKE TEST OK
+Instalar una vez
+      │
+      ▼
+~/.skillshub-rs
+      │
+      ├── Codex
+      ├── Claude Code
+      ├── Cursor
+      ├── Gemini CLI
+      ├── GitHub Copilot
+      ├── Kimi Code CLI
+      └── ... 47 adaptadores integrados
 ```
 
-El ejecutable estará en:
+La biblioteca central conserva el estado gestionado; cada target recibe el Skill mediante `symlink`, `junction` o `copy` según plataforma, herramienta y política elegida.
 
-```text
-target/release/skills-hub-rs
+## Funcionalidades
+
+| Área | Capacidades |
+| --- | --- |
+| Biblioteca | Hub central persistente en `~/.skillshub-rs` y SQLite embebido |
+| Instalación | Directorios locales, repositorios Git, branch/tag y subdirectorios |
+| Descubrimiento | Búsqueda recursiva de `SKILL.md` y `scan` de herramientas instaladas |
+| Integraciones | 47 adaptadores integrados + herramientas personalizadas |
+| Sincronización | Scope global/proyecto; `auto`, `symlink`, `junction`, `copy` |
+| Ciclo de vida | Enable/disable, update, unsync y eliminación segura |
+| Organización | Tags y búsqueda en `skills.sh` |
+| Recuperación | Papelera con restore y purga; retención lógica de 30 días |
+| Desktop | Dashboard, Skills, Tools, instalación, búsqueda, scan y papelera |
+| Supply chain | RustSec, SHA-256, CycloneDX 1.5 y artifact attestations |
+
+## Descarga
+
+Release actual:
+
+https://github.com/ansonTGN/skills-hub-rs/releases/tag/v0.2.0-alpha.2
+
+### Linux — AppImage
+
+```bash
+VERSION=v0.2.0-alpha.2
+
+gh release download "$VERSION"   --repo ansonTGN/skills-hub-rs   --pattern 'skills-hub-rs-desktop-linux-x86_64.AppImage'   --pattern 'skills-hub-rs-desktop-linux-x86_64.AppImage.sha256'
+
+sha256sum -c skills-hub-rs-desktop-linux-x86_64.AppImage.sha256
+chmod +x skills-hub-rs-desktop-linux-x86_64.AppImage
+./skills-hub-rs-desktop-linux-x86_64.AppImage
 ```
 
-## Probar sin tocar tu configuración real
+### Debian/Ubuntu — `.deb`
 
-Toda la CLI acepta `--home`. Así puedes usar un sandbox:
+```bash
+VERSION=v0.2.0-alpha.2
+
+gh release download "$VERSION"   --repo ansonTGN/skills-hub-rs   --pattern 'skills-hub-rs-desktop-linux-x86_64.deb'   --pattern 'skills-hub-rs-desktop-linux-x86_64.deb.sha256'
+
+sha256sum -c skills-hub-rs-desktop-linux-x86_64.deb.sha256
+sudo apt install ./skills-hub-rs-desktop-linux-x86_64.deb
+```
+
+### Linux — CLI
+
+```bash
+VERSION=v0.2.0-alpha.2
+mkdir -p skills-hub-rs-cli
+cd skills-hub-rs-cli
+
+gh release download "$VERSION"   --repo ansonTGN/skills-hub-rs   --pattern 'skills-hub-rs-linux-x86_64.tar.gz'   --pattern 'skills-hub-rs-linux-x86_64.tar.gz.sha256'
+
+sha256sum -c skills-hub-rs-linux-x86_64.tar.gz.sha256
+tar -xzf skills-hub-rs-linux-x86_64.tar.gz
+./skills-hub-rs --help
+```
+
+### Windows
+
+- `skills-hub-rs-windows-x86_64.zip` — CLI portable.
+- `skills-hub-rs-desktop-windows-x86_64-setup.exe` — instalador NSIS.
+- `skills-hub-rs-desktop-windows-x86_64.msi` — instalador MSI.
+
+Cada artefacto incluye su `.sha256`.
+
+## Primeros pasos con la CLI
+
+Para probar sin tocar la configuración real:
 
 ```bash
 export TEST_HUB=/tmp/skills-hub-rs-test
 rm -rf "$TEST_HUB"
 
-./target/release/skills-hub-rs --home "$TEST_HUB" init
-./target/release/skills-hub-rs --home "$TEST_HUB" tools
-./target/release/skills-hub-rs --home "$TEST_HUB" add-local examples/demo-skill --tag prueba
-./target/release/skills-hub-rs --home "$TEST_HUB" list
-./target/release/skills-hub-rs --home "$TEST_HUB" show demo-skill
+skills-hub-rs --home "$TEST_HUB" init
+skills-hub-rs --home "$TEST_HUB" tools
+skills-hub-rs --home "$TEST_HUB" add-local examples/demo-skill --tag prueba
+skills-hub-rs --home "$TEST_HUB" list
+skills-hub-rs --home "$TEST_HUB" show demo-skill
 ```
 
-## Sincronizar con Codex
+Ubicación real por defecto:
 
-Después de validar el sandbox puedes probar con tu configuración real:
-
-```bash
-./target/release/skills-hub-rs add-local /ruta/al/skill \
-  --tag rust \
-  --tool codex
+```text
+~/.skillshub-rs
 ```
 
-La copia central queda en `~/.skillshub-rs/skills/<skill>` y Codex recibe el
-Skill en su directorio global configurado.
-
-Para scope de proyecto:
+### Instalar y sincronizar un Skill local
 
 ```bash
-./target/release/skills-hub-rs sync demo-skill \
-  --tool codex \
-  --scope project \
-  --project /ruta/al/proyecto
+skills-hub-rs add-local /ruta/al/skill   --tag rust   --tool codex
 ```
 
-## Claude Code y Cursor
+### Scope de proyecto
 
 ```bash
-./target/release/skills-hub-rs sync demo-skill --tool claude_code
-./target/release/skills-hub-rs sync demo-skill --tool cursor
+skills-hub-rs sync demo-skill   --tool codex   --scope project   --project /ruta/al/proyecto
 ```
 
-Cursor usa `copy` deliberadamente. Para forzar copia con cualquier otra herramienta:
+### Claude Code y Cursor
 
 ```bash
-./target/release/skills-hub-rs sync demo-skill --tool codex --mode copy --overwrite
+skills-hub-rs sync demo-skill --tool claude_code
+skills-hub-rs sync demo-skill --tool cursor
 ```
 
-## Instalar desde Git
+Cursor fuerza `copy`. Para forzar copia en otra herramienta:
 
 ```bash
-./target/release/skills-hub-rs add-git \
-  https://github.com/usuario/repositorio.git \
-  --tool codex \
-  --tag github
+skills-hub-rs sync demo-skill   --tool codex   --mode copy   --overwrite
 ```
 
-Con rama/tag:
+### Instalar desde Git
 
 ```bash
-./target/release/skills-hub-rs add-git \
-  https://github.com/usuario/repositorio.git \
-  --ref v1.0.0
+skills-hub-rs add-git   https://github.com/usuario/repositorio.git   --tool codex   --tag github
+```
+
+Con branch/tag:
+
+```bash
+skills-hub-rs add-git   https://github.com/usuario/repositorio.git   --ref v1.0.0
 ```
 
 Con subdirectorio:
 
 ```bash
-./target/release/skills-hub-rs add-git \
-  https://github.com/usuario/repositorio.git \
-  --subdir skills
+skills-hub-rs add-git   https://github.com/usuario/repositorio.git   --subdir skills
 ```
 
-## Actualizar
+### Actualizar
 
 ```bash
-./target/release/skills-hub-rs update demo-skill
-./target/release/skills-hub-rs update
+skills-hub-rs update demo-skill
+skills-hub-rs update
 ```
 
-Los Skills locales se comparan contra su carpeta original. Los Git se vuelven a
-obtener del repositorio y se resincronizan cuando cambia el contenido.
-
-## Scan
+### Scan
 
 ```bash
-./target/release/skills-hub-rs scan
-./target/release/skills-hub-rs scan --tool codex
+skills-hub-rs scan
+skills-hub-rs scan --tool codex
 ```
 
-`scan` descubre Skills presentes en directorios de herramientas. Para gestionar
-uno de ellos, impórtalo con `add-local <ruta-detectada>`.
-
-## Habilitar y deshabilitar
+### Enable / disable
 
 ```bash
-./target/release/skills-hub-rs disable demo-skill
-./target/release/skills-hub-rs enable demo-skill
+skills-hub-rs disable demo-skill
+skills-hub-rs enable demo-skill
 ```
 
-Deshabilitar elimina los targets activos, pero conserva la copia gestionada y su
-configuración en SQLite.
-
-## Papelera
-
-El borrado normal es recuperable:
+### Papelera
 
 ```bash
-./target/release/skills-hub-rs remove demo-skill
-./target/release/skills-hub-rs recycle list
-./target/release/skills-hub-rs recycle restore <ID>
+skills-hub-rs remove demo-skill
+skills-hub-rs recycle list
+skills-hub-rs recycle restore <ID>
+skills-hub-rs recycle purge
+skills-hub-rs recycle purge --all
+skills-hub-rs remove demo-skill --permanent
 ```
 
-Purgar elementos con más de 30 días:
+### Herramientas personalizadas
 
 ```bash
-./target/release/skills-hub-rs recycle purge
+skills-hub-rs custom-tool add mi_agente   --label "Mi agente"   --global-dir '~/.mi-agente/skills'   --project-dir '.mi-agente/skills'   --mode auto
+
+skills-hub-rs sync demo-skill --tool mi_agente
 ```
 
-Eliminar todo lo contenido en la papelera:
+### Búsqueda en skills.sh
 
 ```bash
-./target/release/skills-hub-rs recycle purge --all
+skills-hub-rs search rust
+skills-hub-rs search security --limit 10 --json
 ```
 
-Borrado inmediato y permanente:
+## Desktop Tauri
 
-```bash
-./target/release/skills-hub-rs remove demo-skill --permanent
+La GUI delega en el mismo motor Rust que la CLI:
+
+```text
+Desktop WebView
+      │
+      │ Tauri IPC
+      ▼
+skills-hub-rs-desktop
+      │
+      │ path dependency
+      ▼
+skills-hub-rs core
+  ├─ manager
+  ├─ SQLite
+  ├─ filesystem
+  ├─ Git
+  ├─ tools
+  └─ skills.sh
 ```
 
-## Herramienta personalizada
+La interfaz actual incluye dashboard, gestión de Skills, Tools, instalación local/Git, sync/unsync, enable/disable, update, búsqueda online, scan, custom tools y papelera.
 
-```bash
-./target/release/skills-hub-rs custom-tool add mi_agente \
-  --label "Mi agente" \
-  --global-dir '~/.mi-agente/skills' \
-  --project-dir '.mi-agente/skills' \
-  --mode auto
+Consulta [`docs/V0.2.0_TAURI.md`](docs/V0.2.0_TAURI.md) para detalles técnicos.
 
-./target/release/skills-hub-rs sync demo-skill --tool mi_agente
-```
+## Adaptadores integrados
 
-## Búsqueda online
+El core incluye **47 adaptadores**. La fuente de verdad está en [`src/tools.rs`](src/tools.rs):
 
-```bash
-./target/release/skills-hub-rs search rust
-./target/release/skills-hub-rs search security --limit 10 --json
-```
-
-## Publicación en GitHub
-
-No es necesario versionar ejecutables dentro del historial Git. Este repositorio
-incluye `.github/workflows/release.yml` para publicar artefactos en **GitHub Releases**.
-
-Primero sube y valida `main`:
-
-```bash
-git init
-git add .
-git commit -m "Initial Rust implementation"
-git branch -M main
-git remote add origin https://github.com/ansonTGN/skills-hub-rs.git
-git push -u origin main
-```
-
-Tras la compilación local, comprueba que `Cargo.lock` existe y añádelo al commit.
-No publiques una release sin ese lockfile.
-
-Cuando CI esté verde:
-
-```bash
-git tag -a v0.1.0 -m "skills-hub-rs v0.1.0"
-git push origin v0.1.0
-```
-
-El workflow crea automáticamente:
-
-- `skills-hub-rs-linux-x86_64.tar.gz`
-- `skills-hub-rs-linux-x86_64.tar.gz.sha256`
-- `skills-hub-rs-windows-x86_64.zip`
-- `skills-hub-rs-windows-x86_64.zip.sha256`
-
-Los binarios se publican en la página **Releases** del repositorio y se pueden
-descargar sin instalar Rust.
+`Cursor`, `Claude Code`, `Codex`, `DeepSeek Harness`, `OpenCode`, `Antigravity`, `Amp`, `Kimi Code CLI`, `Augment`, `OpenClaw`, `Copaw`, `Cline`, `CodeBuddy`, `CodeWhale`, `WorkBuddy`, `Command Code`, `Continue`, `Crush`, `Junie`, `iFlow CLI`, `Kiro CLI`, `Kode`, `MCPJam`, `Mistral Vibe`, `Mux`, `OpenClaude IDE`, `OpenHands`, `Pi`, `Qoder`, `QoderWork`, `Qwen Code`, `Trae`, `Trae CN`, `Zencoder`, `Neovate`, `Pochi`, `AdaL`, `Kilo Code`, `Roo Code`, `Goose`, `Gemini CLI`, `GitHub Copilot`, `Clawdbot`, `Droid`, `Windsurf`, `MoltBot`, `Hermes Agent`.
 
 ## Comandos principales
 
@@ -294,53 +274,156 @@ tag
 custom-tool
 ```
 
-Usa:
+Ayuda:
 
 ```bash
 skills-hub-rs --help
 skills-hub-rs <comando> --help
 ```
 
-## Diferencias respecto al Skills Hub desktop actual
+## Seguridad del filesystem
 
-Esta versión reproduce el núcleo local de gestión y distribución de Skills, pero
-**v0.1.0 no pretende todavía paridad total con la aplicación desktop upstream**.
-Quedan fuera de esta fase:
+- evita sincronizaciones con origen/destino solapados;
+- no sobrescribe targets salvo `--overwrite`;
+- conserva targets físicos compartidos mientras exista otra relación propietaria;
+- elimina symlinks/junctions como enlaces, sin recorrer deliberadamente su destino;
+- nunca borra el origen local original al eliminar un Skill gestionado;
+- las actualizaciones locales preparan el contenido antes del reemplazo;
+- Cursor usa `copy` por diseño.
 
-- UI React/Tauri;
-- actualizador de la propia aplicación;
-- scheduler del sistema para actualizaciones automáticas;
-- sincronización multi-dispositivo mediante repositorio Git;
-- OAuth/token vault para dicha sincronización;
-- merge de tres vías y resolución interactiva de conflictos entre dispositivos.
+## Seguridad del Desktop
 
-Es preferible estabilizar primero el motor Rust local y el formato de datos antes
-de añadir esas capas.
+`v0.2.0-alpha.2` endurece la WebView Tauri mediante:
 
-## Seguridad de filesystem
+- CSP restrictiva con `default-src 'self'`;
+- scripts/estilos limitados al bundle;
+- `object-src 'none'`;
+- `base-uri 'none'`;
+- `form-action 'none'`;
+- `frame-ancestors 'none'`;
+- `X-Content-Type-Options: nosniff`;
+- `Permissions-Policy` con cámara, micrófono y geolocalización deshabilitados.
 
-- no se sincroniza si origen y destino se solapan;
-- un target existente no se sobrescribe salvo operación explícita con `--overwrite`;
-- al borrar un target compartido por varias relaciones se conserva mientras exista otro propietario;
-- enlaces simbólicos y junctions se eliminan como enlaces, sin recorrer deliberadamente su destino;
-- el origen local original nunca se elimina al quitar un Skill gestionado.
+## Supply chain
 
-## Licencia
+La pipeline incorpora:
 
-MIT.
+1. `cargo fmt`, `cargo check`, Clippy con `-D warnings`, tests y smoke tests.
+2. Auditoría RustSec para core y Desktop.
+3. Builds independientes Linux/Windows.
+4. SHA-256 para entregables.
+5. SBOM **CycloneDX 1.5** para core y Desktop.
+6. GitHub artifact attestations para provenance y asociación de SBOM.
 
----
+SBOM publicados:
 
-## Desarrollo v0.2.0 — interfaz Tauri
+```text
+skills-hub-rs-sbom.cdx.json
+skills-hub-rs-desktop-sbom.cdx.json
+```
 
-La rama de desarrollo `v0.2.0-tauri` añade una aplicación desktop Tauri 2 que reutiliza directamente el motor Rust de este repositorio. La primera iteración (`0.2.0-alpha.1`) incluye dashboard, gestión de Skills, tools, sync/unsync, instalación local/Git, búsqueda en skills.sh, scan, tags, custom tools y papelera.
+> El SBOM Desktop representa el grafo Rust/Cargo. No pretende todavía inventariar exhaustivamente todas las bibliotecas nativas de GTK/WebKit.
 
-Documentación y ejecución:
+### Verificar checksum
 
 ```bash
-cargo generate-lockfile --manifest-path desktop/src-tauri/Cargo.toml
+sha256sum -c skills-hub-rs-linux-x86_64.tar.gz.sha256
+```
+
+### Verificar attestation
+
+```bash
+gh attestation verify   skills-hub-rs-linux-x86_64.tar.gz   --repo ansonTGN/skills-hub-rs
+```
+
+Desktop:
+
+```bash
+gh attestation verify   skills-hub-rs-desktop-linux-x86_64.AppImage   --repo ansonTGN/skills-hub-rs
+```
+
+SBOM:
+
+```bash
+gh attestation verify   skills-hub-rs-sbom.cdx.json   --repo ansonTGN/skills-hub-rs
+```
+
+## Artefactos de `v0.2.0-alpha.2`
+
+La release publica **20 assets** contando entregables y checksums:
+
+| Plataforma | Entregables principales |
+| --- | --- |
+| Linux CLI | binario raw + `.tar.gz` |
+| Windows CLI | `.exe` raw + `.zip` |
+| Linux Desktop | `.AppImage` + `.deb` |
+| Windows Desktop | NSIS `.exe` + `.msi` |
+| Supply chain | SBOM core + SBOM Desktop |
+
+Cada uno de esos diez artefactos principales dispone de su `.sha256`.
+
+## Compilar desde código fuente
+
+Requisitos principales:
+
+- Rust `1.96.0`;
+- Git en `PATH`;
+- toolchain nativo de la plataforma.
+
+Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install -y build-essential pkg-config git curl
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+rustup toolchain install 1.96.0 --profile minimal --component rustfmt,clippy
+rustup default 1.96.0
+```
+
+Core:
+
+```bash
+git clone https://github.com/ansonTGN/skills-hub-rs.git
+cd skills-hub-rs
+./scripts/validate-local-linux.sh
+```
+
+Desktop Ubuntu 24.04:
+
+```bash
+sudo apt install -y   build-essential   curl   wget   file   pkg-config   libssl-dev   libgtk-3-dev   libwebkit2gtk-4.1-dev   librsvg2-dev   libayatana-appindicator3-dev
+
+cargo install tauri-cli --version 2.11.4 --locked
+./scripts/validate-desktop-linux.sh
+```
+
+Ejecutar la GUI contra un hub aislado:
+
+```bash
 export SKILLS_HUB_HOME=/tmp/skills-hub-rs-gui-test
 cargo run --manifest-path desktop/src-tauri/Cargo.toml
 ```
 
-Consulta [`docs/V0.2.0_TAURI.md`](docs/V0.2.0_TAURI.md) para dependencias Ubuntu, arquitectura y validación.
+## CI/CD
+
+El repositorio mantiene:
+
+- [`ci.yml`](.github/workflows/ci.yml) — core Linux/Windows.
+- [`desktop-ci.yml`](.github/workflows/desktop-ci.yml) — Desktop Linux/Windows.
+- [`security-audit.yml`](.github/workflows/security-audit.yml) — RustSec en PR, `main`, manual y semanal.
+- [`release.yml`](.github/workflows/release.yml) — builds, SBOM, attestations y GitHub Release.
+
+## Roadmap hacia `v0.2.0`
+
+Tras `alpha.2`, los siguientes bloques naturales son:
+
+- selectores nativos de archivos/directorios en la GUI;
+- mover operaciones Git/filesystem potencialmente lentas fuera del hilo UI;
+- normalizar nombres y metadatos de packaging;
+- ampliar smoke tests de instaladores;
+- evaluar firma de código y mecanismo de actualización.
+
+## Licencia
+
+MIT. Consulta [`LICENSE`](LICENSE).
