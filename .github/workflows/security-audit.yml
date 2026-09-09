@@ -1,0 +1,46 @@
+name: Security audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - '.github/workflows/security-audit.yml'
+
+  pull_request:
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - '.github/workflows/security-audit.yml'
+
+  schedule:
+    - cron: '17 4 * * 1'
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: RustSec audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Rust toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal
+
+      - name: Select Rust
+        run: rustup default 1.96.0
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --version 0.22.2 --locked
+
+      - name: Audit core dependencies
+        run: cargo audit --deny yanked
+
+      - name: Audit desktop dependencies
+        run: cargo audit --file desktop/src-tauri/Cargo.lock --deny yanked

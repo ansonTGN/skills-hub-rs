@@ -11,3 +11,7 @@ Thumbs.db
 *.sqlite3-wal
 .env
 /desktop/src-tauri/target/
+
+# Generated CycloneDX SBOMs
+/skills-hub-rs-sbom.cdx.json
+/desktop/src-tauri/skills-hub-rs-desktop-sbom.cdx.json

@@ -4,6 +4,15 @@ on:
   push:
     tags:
       - 'v*'
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'src/**'
+      - 'desktop/**'
+      - 'scripts/**'
+
   workflow_dispatch:
     inputs:
       tag:
@@ -12,7 +21,7 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
 
@@ -314,9 +323,14 @@ jobs:
       # ----------------------------------------------------------
       # Windows MSI
       #
-      # WiX requires a numeric prerelease identifier.
-      # Public version: 0.2.0-alpha.1
-      # MSI internal version for this alpha: 0.2.0-1
+      # WiX accepts only a numeric prerelease identifier.
+      #
+      # Examples:
+      #   0.2.0-alpha.1 -> 0.2.0-1
+      #   0.2.0-alpha.2 -> 0.2.0-2
+      #   0.2.0         -> 0.2.0
+      #
+      # Unsupported prerelease schemes fail closed.
       # ----------------------------------------------------------
 
       - name: Create MSI version override
@@ -324,13 +338,27 @@ jobs:
         working-directory: desktop/src-tauri
         shell: pwsh
         run: |
-          @'
-          {
-            "version": "0.2.0-1"
+          $config = Get-Content tauri.conf.json -Raw | ConvertFrom-Json
+          $publicVersion = [string]$config.version
+
+          if ($publicVersion -match '^(\d+\.\d+\.\d+)$') {
+            $msiVersion = $publicVersion
           }
-          '@ | Set-Content `
-            -Encoding UTF8 `
-            tauri.msi.conf.json
+          elseif ($publicVersion -match '^(\d+\.\d+\.\d+)-alpha\.(\d+)$') {
+            $msiVersion = "$($Matches[1])-$($Matches[2])"
+          }
+          else {
+            throw "Unsupported MSI version mapping: $publicVersion"
+          }
+
+          @{
+            version = $msiVersion
+          } |
+            ConvertTo-Json |
+            Set-Content -Encoding UTF8 tauri.msi.conf.json
+
+          Write-Host "Public version: $publicVersion"
+          Write-Host "MSI version:    $msiVersion"
 
       - name: Build Windows MSI installer
         if: runner.os == 'Windows'
@@ -399,6 +427,156 @@ jobs:
 
 
   # ============================================================
+  # SECURITY AUDIT + CYCLONEDX SBOM
+  # ============================================================
+
+  sbom:
+    name: Security audit + CycloneDX SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+
+      - name: Rust toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal
+
+      - name: Select Rust
+        run: rustup default 1.96.0
+
+      - name: Install supply-chain tools
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          cargo install cargo-audit \
+            --version 0.22.2 \
+            --locked
+
+          cargo install cargo-cyclonedx \
+            --version 0.5.9 \
+            --locked
+
+      - name: Audit Rust dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          cargo audit --deny yanked
+
+          cargo audit \
+            --file desktop/src-tauri/Cargo.lock \
+            --deny yanked
+
+      - name: Generate CycloneDX 1.5 SBOMs
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          cargo cyclonedx \
+            --manifest-path Cargo.toml \
+            --format json \
+            --spec-version 1.5 \
+            --override-filename skills-hub-rs-sbom
+
+          cargo cyclonedx \
+            --manifest-path desktop/src-tauri/Cargo.toml \
+            --format json \
+            --spec-version 1.5 \
+            --override-filename skills-hub-rs-desktop-sbom
+
+          mkdir -p dist
+
+          mv \
+            skills-hub-rs-sbom.json \
+            dist/skills-hub-rs-sbom.cdx.json
+
+          mv \
+            desktop/src-tauri/skills-hub-rs-desktop-sbom.json \
+            dist/skills-hub-rs-desktop-sbom.cdx.json
+
+      - name: Validate SBOMs
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          CORE_VERSION="$(
+            cargo metadata \
+              --no-deps \
+              --format-version 1 |
+            jq -r \
+              '.packages[]
+               | select(.name == "skills-hub-rs")
+               | .version' |
+            head -1
+          )"
+
+          DESKTOP_VERSION="$(
+            cargo metadata \
+              --manifest-path desktop/src-tauri/Cargo.toml \
+              --no-deps \
+              --format-version 1 |
+            jq -r \
+              '.packages[]
+               | select(.name == "skills-hub-rs-desktop")
+               | .version' |
+            head -1
+          )"
+
+          test "$(
+            jq -r '.bomFormat' \
+              dist/skills-hub-rs-sbom.cdx.json
+          )" = "CycloneDX"
+
+          test "$(
+            jq -r '.specVersion' \
+              dist/skills-hub-rs-sbom.cdx.json
+          )" = "1.5"
+
+          test "$(
+            jq -r '.metadata.component.version' \
+              dist/skills-hub-rs-sbom.cdx.json
+          )" = "$CORE_VERSION"
+
+          test "$(
+            jq -r '.bomFormat' \
+              dist/skills-hub-rs-desktop-sbom.cdx.json
+          )" = "CycloneDX"
+
+          test "$(
+            jq -r '.specVersion' \
+              dist/skills-hub-rs-desktop-sbom.cdx.json
+          )" = "1.5"
+
+          test "$(
+            jq -r '.metadata.component.version' \
+              dist/skills-hub-rs-desktop-sbom.cdx.json
+          )" = "$DESKTOP_VERSION"
+
+      - name: Generate SBOM checksums
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          cd dist
+
+          sha256sum \
+            skills-hub-rs-sbom.cdx.json \
+            > skills-hub-rs-sbom.cdx.json.sha256
+
+          sha256sum \
+            skills-hub-rs-desktop-sbom.cdx.json \
+            > skills-hub-rs-desktop-sbom.cdx.json.sha256
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: dist/*
+          if-no-files-found: error
+
+
+  # ============================================================
   # PUBLISH ONE GITHUB RELEASE
   # ============================================================
 
@@ -408,6 +586,15 @@ jobs:
     needs:
       - build
       - desktop
+      - sbom
+
+    if: github.event_name != 'pull_request'
+
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
 
     runs-on: ubuntu-latest
 
@@ -437,6 +624,41 @@ jobs:
             -type f \
             -printf '%f\t%s bytes\n' \
             | sort
+
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/skills-hub-rs-linux-x86_64
+            dist/skills-hub-rs-linux-x86_64.tar.gz
+            dist/skills-hub-rs-windows-x86_64.exe
+            dist/skills-hub-rs-windows-x86_64.zip
+            dist/skills-hub-rs-desktop-linux-x86_64.deb
+            dist/skills-hub-rs-desktop-linux-x86_64.AppImage
+            dist/skills-hub-rs-desktop-windows-x86_64-setup.exe
+            dist/skills-hub-rs-desktop-windows-x86_64.msi
+            dist/skills-hub-rs-sbom.cdx.json
+            dist/skills-hub-rs-desktop-sbom.cdx.json
+
+      - name: Attest core Rust dependency SBOM
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/skills-hub-rs-linux-x86_64
+            dist/skills-hub-rs-linux-x86_64.tar.gz
+            dist/skills-hub-rs-windows-x86_64.exe
+            dist/skills-hub-rs-windows-x86_64.zip
+          sbom-path: dist/skills-hub-rs-sbom.cdx.json
+
+      - name: Attest desktop Rust dependency SBOM
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/skills-hub-rs-desktop-linux-x86_64.deb
+            dist/skills-hub-rs-desktop-linux-x86_64.AppImage
+            dist/skills-hub-rs-desktop-windows-x86_64-setup.exe
+            dist/skills-hub-rs-desktop-windows-x86_64.msi
+          sbom-path: dist/skills-hub-rs-desktop-sbom.cdx.json
 
       - name: Publish release
         env:
