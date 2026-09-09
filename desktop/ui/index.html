@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>Skills Hub Rust</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">SR</div>
+        <div>
+          <strong>Skills Hub Rust</strong>
+          <span>v0.2.0-alpha.1</span>
+        </div>
+      </div>
+
+      <nav id="nav">
+        <button class="nav-item active" data-view="dashboard"><span>⌂</span> Dashboard</button>
+        <button class="nav-item" data-view="skills"><span>◆</span> Skills</button>
+        <button class="nav-item" data-view="tools"><span>⌘</span> Tools</button>
+        <button class="nav-item" data-view="install"><span>＋</span> Instalar</button>
+        <button class="nav-item" data-view="search"><span>⌕</span> skills.sh</button>
+        <button class="nav-item" data-view="scan"><span>◎</span> Scan</button>
+        <button class="nav-item" data-view="recycle"><span>♲</span> Papelera</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="connection"><i></i><span>Motor Rust local</span></div>
+        <small id="hubRoot">~/.skillshub-rs</small>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="eyebrow">CONTROL PLANE</p>
+          <h1 id="pageTitle">Dashboard</h1>
+        </div>
+        <div class="top-actions">
+          <button class="btn ghost" id="refreshBtn">↻ Actualizar</button>
+          <button class="btn primary" data-jump="install">＋ Instalar Skill</button>
+        </div>
+      </header>
+
+      <section id="view-dashboard" class="view active"></section>
+      <section id="view-skills" class="view"></section>
+      <section id="view-tools" class="view"></section>
+      <section id="view-install" class="view"></section>
+      <section id="view-search" class="view"></section>
+      <section id="view-scan" class="view"></section>
+      <section id="view-recycle" class="view"></section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <div id="modalRoot"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

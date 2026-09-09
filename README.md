@@ -328,3 +328,19 @@ de añadir esas capas.
 ## Licencia
 
 MIT.
+
+---
+
+## Desarrollo v0.2.0 — interfaz Tauri
+
+La rama de desarrollo `v0.2.0-tauri` añade una aplicación desktop Tauri 2 que reutiliza directamente el motor Rust de este repositorio. La primera iteración (`0.2.0-alpha.1`) incluye dashboard, gestión de Skills, tools, sync/unsync, instalación local/Git, búsqueda en skills.sh, scan, tags, custom tools y papelera.
+
+Documentación y ejecución:
+
+```bash
+cargo generate-lockfile --manifest-path desktop/src-tauri/Cargo.toml
+export SKILLS_HUB_HOME=/tmp/skills-hub-rs-gui-test
+cargo run --manifest-path desktop/src-tauri/Cargo.toml
+```
+
+Consulta [`docs/V0.2.0_TAURI.md`](docs/V0.2.0_TAURI.md) para dependencias Ubuntu, arquitectura y validación.
