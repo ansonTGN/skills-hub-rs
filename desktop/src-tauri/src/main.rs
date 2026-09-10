@@ -18,6 +18,16 @@ fn hub() -> Result<SkillsHub, String> {
     SkillsHub::open(None).map_err(err)
 }
 
+async fn blocking<T, F>(operation: F) -> Result<T, String>
+where
+    T: Send + 'static,
+    F: FnOnce() -> Result<T, String> + Send + 'static,
+{
+    tauri::async_runtime::spawn_blocking(operation)
+        .await
+        .map_err(|e| format!("blocking task failed: {e}"))?
+}
+
 #[derive(Debug, Serialize)]
 struct SkillView {
     skill: SkillRecord,
@@ -107,34 +117,40 @@ fn dashboard() -> Result<Dashboard, String> {
 }
 
 #[tauri::command]
-fn install_local(path: String, tags: Vec<String>) -> Result<Vec<SkillRecord>, String> {
-    let hub = hub()?;
-    let options = InstallOptions {
-        tags,
-        ..Default::default()
-    };
-    hub.install_local(Path::new(&path), &options).map_err(err)
+async fn install_local(path: String, tags: Vec<String>) -> Result<Vec<SkillRecord>, String> {
+    blocking(move || {
+        let hub = hub()?;
+        let options = InstallOptions {
+            tags,
+            ..Default::default()
+        };
+        hub.install_local(Path::new(&path), &options).map_err(err)
+    })
+    .await
 }
 
 #[tauri::command]
-fn install_git(
+async fn install_git(
     url: String,
     revision: Option<String>,
     subdir: Option<String>,
     tags: Vec<String>,
 ) -> Result<Vec<SkillRecord>, String> {
-    let hub = hub()?;
-    let options = InstallOptions {
-        tags,
-        ..Default::default()
-    };
-    let subdir = subdir.filter(|s| !s.trim().is_empty()).map(PathBuf::from);
-    hub.install_git(&url, revision.as_deref(), subdir.as_deref(), &options)
-        .map_err(err)
+    blocking(move || {
+        let hub = hub()?;
+        let options = InstallOptions {
+            tags,
+            ..Default::default()
+        };
+        let subdir = subdir.filter(|s| !s.trim().is_empty()).map(PathBuf::from);
+        hub.install_git(&url, revision.as_deref(), subdir.as_deref(), &options)
+            .map_err(err)
+    })
+    .await
 }
 
 #[tauri::command]
-fn sync_skill(
+async fn sync_skill(
     skill: String,
     tool: String,
     scope: String,
@@ -142,12 +158,15 @@ fn sync_skill(
     mode: String,
     overwrite: bool,
 ) -> Result<TargetRecord, String> {
-    let hub = hub()?;
-    let scope: Scope = scope.parse().map_err(err)?;
-    let mode: SyncMode = mode.parse().map_err(err)?;
-    let project = project.filter(|s| !s.trim().is_empty()).map(PathBuf::from);
-    hub.sync_skill(&skill, &tool, scope, project.as_deref(), mode, overwrite)
-        .map_err(err)
+    blocking(move || {
+        let hub = hub()?;
+        let scope: Scope = scope.parse().map_err(err)?;
+        let mode: SyncMode = mode.parse().map_err(err)?;
+        let project = project.filter(|s| !s.trim().is_empty()).map(PathBuf::from);
+        hub.sync_skill(&skill, &tool, scope, project.as_deref(), mode, overwrite)
+            .map_err(err)
+    })
+    .await
 }
 
 #[tauri::command]
@@ -176,13 +195,13 @@ fn set_enabled(skill: String, enabled: bool) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn update_skill(skill: String) -> Result<String, String> {
-    hub()?.update_skill(&skill).map_err(err)
+async fn update_skill(skill: String) -> Result<String, String> {
+    blocking(move || hub()?.update_skill(&skill).map_err(err)).await
 }
 
 #[tauri::command]
-fn update_all() -> Result<Vec<(String, String)>, String> {
-    hub()?.update_all().map_err(err)
+async fn update_all() -> Result<Vec<(String, String)>, String> {
+    blocking(move || hub()?.update_all().map_err(err)).await
 }
 
 #[tauri::command]
@@ -240,13 +259,13 @@ fn recycle_purge(all: bool) -> Result<usize, String> {
 }
 
 #[tauri::command]
-fn search_online(query: String, limit: usize) -> Result<Vec<OnlineSkillResult>, String> {
-    online::search(&query, limit).map_err(err)
+async fn search_online(query: String, limit: usize) -> Result<Vec<OnlineSkillResult>, String> {
+    blocking(move || online::search(&query, limit).map_err(err)).await
 }
 
 #[tauri::command]
-fn scan_installed(tool: Option<String>) -> Result<Vec<DetectedSkill>, String> {
-    hub()?.scan_tool(tool.as_deref()).map_err(err)
+async fn scan_installed(tool: Option<String>) -> Result<Vec<DetectedSkill>, String> {
+    blocking(move || hub()?.scan_tool(tool.as_deref()).map_err(err)).await
 }
 
 #[tauri::command]
