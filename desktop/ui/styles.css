@@ -159,3 +159,15 @@ input:focus, select:focus { border-color: #4f806f; box-shadow: 0 0 0 3px rgba(10
   .grid-2 { grid-template-columns: 1fr; }
   .tool-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Native directory picker */
+.path-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.path-picker .btn {
+  white-space: nowrap;
+}

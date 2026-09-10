@@ -148,9 +148,21 @@ function customToolForm() {
   return `<form id="customToolForm" class="form-grid">
     <div class="field"><label>Key</label><input name="key" placeholder="mi_agente" required /></div>
     <div class="field"><label>Etiqueta</label><input name="label" placeholder="Mi agente" required /></div>
-    <div class="field full"><label>Directorio global</label><input name="global_dir" placeholder="~/.mi-agente/skills" required /></div>
+    <div class="field full">
+      <label>Directorio global</label>
+      <div class="path-picker">
+        <input name="global_dir" placeholder="~/.mi-agente/skills" required />
+        <button class="btn" type="button" data-pick-directory="global_dir">Seleccionar…</button>
+      </div>
+    </div>
     <div class="field"><label>Directorio de proyecto</label><input name="project_dir" placeholder=".mi-agente/skills" /></div>
-    <div class="field"><label>Directorio de detección</label><input name="detect_dir" placeholder="~/.mi-agente/skills" /></div>
+    <div class="field">
+      <label>Directorio de detección</label>
+      <div class="path-picker">
+        <input name="detect_dir" placeholder="~/.mi-agente/skills" />
+        <button class="btn" type="button" data-pick-directory="detect_dir">Seleccionar…</button>
+      </div>
+    </div>
     <div class="field"><label>Modo</label><select name="mode"><option>auto</option><option>symlink</option><option>copy</option><option>junction</option></select></div>
     <div class="field" style="align-self:end"><button class="btn primary" type="submit">Guardar herramienta</button></div>
   </form>`;
@@ -162,7 +174,14 @@ function renderInstall() {
       <div class="card">
         <div class="card-header"><div><h2>Origen local</h2><p>Importa uno o varios directorios con SKILL.md</p></div></div>
         <form id="localInstallForm">
-          <div class="field"><label>Ruta local</label><input name="path" placeholder="/ruta/al/skill" required /><span class="help">Puede ser un Skill directo o una carpeta con Skills anidados.</span></div>
+          <div class="field">
+            <label>Ruta local</label>
+            <div class="path-picker">
+              <input name="path" placeholder="/ruta/al/skill" required />
+              <button class="btn" type="button" data-pick-directory="path">Seleccionar…</button>
+            </div>
+            <span class="help">Puede ser un Skill directo o una carpeta con Skills anidados.</span>
+          </div>
           <div class="field" style="margin-top:12px"><label>Tags</label><input name="tags" placeholder="rust, seguridad, agentes" /></div>
           <div class="form-actions"><button class="btn primary" type="submit">Instalar local</button></div>
         </form>
@@ -265,7 +284,13 @@ function openDetail(name) {
         <div class="field"><label>Tool</label><select name="tool">${toolOptions}</select></div>
         <div class="field"><label>Scope</label><select name="scope"><option value="global">global</option><option value="project">project</option></select></div>
         <div class="field"><label>Modo</label><select name="mode"><option>auto</option><option>symlink</option><option>copy</option><option>junction</option></select></div>
-        <div class="field"><label>Proyecto (si scope=project)</label><input name="project" placeholder="/ruta/al/proyecto" /></div>
+        <div class="field">
+          <label>Proyecto (si scope=project)</label>
+          <div class="path-picker">
+            <input name="project" placeholder="/ruta/al/proyecto" />
+            <button class="btn" type="button" data-pick-directory="project">Seleccionar…</button>
+          </div>
+        </div>
         <div class="field full"><label><input type="checkbox" name="overwrite" style="width:auto;margin-right:7px" /> permitir overwrite explícito</label></div>
         <div class="field full"><button class="btn primary" type="submit">Sincronizar</button></div>
       </form>
@@ -295,6 +320,22 @@ function tags(value) {
 }
 
 document.addEventListener("click", async e => {
+  const picker = e.target.closest("[data-pick-directory]");
+  if (picker) {
+    const form = picker.closest("form");
+    const fieldName = picker.dataset.pickDirectory;
+    const input = form?.querySelector(`[name="${fieldName}"]`);
+
+    if (input) {
+      const selected = await call("pick_directory");
+      if (selected) {
+        input.value = selected;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+    return;
+  }
+
   const nav = e.target.closest("[data-view]"); if (nav) setView(nav.dataset.view);
   const jump = e.target.closest("[data-jump]"); if (jump) setView(jump.dataset.jump);
   if (e.target.closest("[data-close]") || e.target.classList.contains("modal-backdrop")) document.getElementById("modalRoot").innerHTML = "";
