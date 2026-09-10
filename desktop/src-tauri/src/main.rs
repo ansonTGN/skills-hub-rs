@@ -8,6 +8,7 @@ use skills_hub_rs::models::{
     TargetRecord,
 };
 use skills_hub_rs::{online, SkillsHub};
+use tauri_plugin_dialog::DialogExt;
 
 fn err<E: std::fmt::Display>(e: E) -> String {
     e.to_string()
@@ -276,8 +277,21 @@ fn remove_custom_tool(key: String) -> Result<(), String> {
     hub()?.remove_custom_tool(&key).map_err(err)
 }
 
+#[tauri::command]
+async fn pick_directory(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let selected = app
+        .dialog()
+        .file()
+        .blocking_pick_folder()
+        .and_then(|path| path.into_path().ok())
+        .map(|path| path.to_string_lossy().into_owned());
+
+    Ok(selected)
+}
+
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             dashboard,
             install_local,
@@ -297,6 +311,7 @@ fn main() {
             scan_installed,
             save_custom_tool,
             remove_custom_tool,
+            pick_directory,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Skills Hub Rust desktop");
